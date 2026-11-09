@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#25212f">
+  <meta name="description" content="Dein persönlicher Workout-Tracker. Offline, schnell und übersichtlich.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>IronLog – Gym Tracker</title>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="IronLog Startseite" data-nav="home">
+        <span class="brand-mark">IL</span><span>IRON<span class="brand-accent">LOG</span></span>
+      </a>
+      <div class="topbar-actions">
+        <span id="save-status" class="save-status"><i></i> Lokal gespeichert</span>
+        <button class="icon-btn" id="quick-settings" aria-label="Einstellungen">⚙</button>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="view active" id="view-home">
+        <div class="page-heading">
+          <div><p class="eyebrow" id="today-label">DEIN TRAINING</p><h1>Auf geht's.</h1><p class="muted">Kleine Schritte. Stärker werden.</p></div>
+          <div class="avatar">A</div>
+        </div>
+        <div class="hero-card">
+          <div class="hero-copy">
+            <span class="pill pill-light">BEREIT FÜR HEUTE?</span>
+            <h2>Dein nächstes<br>Workout wartet.</h2>
+            <p>Wähle deinen Trainingsplan und leg los.</p>
+            <button class="btn btn-light" id="home-start">Training starten <span>→</span></button>
+          </div>
+          <div class="hero-orbit"><span>✦</span><b>IRON<br>MODE</b></div>
+        </div>
+        <div class="section-head"><div><p class="eyebrow">ÜBERBLICK</p><h2>Deine Woche</h2></div><button class="text-btn" data-nav="progress">Alle Stats →</button></div>
+        <div class="stats-grid">
+          <article class="stat-card"><span class="stat-icon">▦</span><strong id="week-workouts">0</strong><small>Workouts diese Woche</small></article>
+          <article class="stat-card"><span class="stat-icon">↗</span><strong id="week-volume">0 kg</strong><small>Trainingsvolumen</small></article>
+          <article class="stat-card"><span class="stat-icon">◷</span><strong id="week-time">0 min</strong><small>Trainingszeit</small></article>
+        </div>
+        <div class="section-head"><div><p class="eyebrow">ZULETZT</p><h2>Letzte Workouts</h2></div><button class="text-btn" data-nav="history">Historie →</button></div>
+        <div id="recent-workouts" class="stack-list empty-state">Noch keine Workouts. Dein erstes Training wartet. 💪</div>
+        <div class="section-head"><div><p class="eyebrow">DEINE PLÄNE</p><h2>Trainingsprofile</h2></div><button class="text-btn" data-nav="plans">Verwalten →</button></div>
+        <div id="home-plans" class="plan-mini-list"></div>
+      </section>
+
+      <section class="view" id="view-plans">
+        <div class="page-heading"><div><p class="eyebrow">DEINE STRUKTUR</p><h1>Trainingspläne</h1><p class="muted">Mehrere Splits. Jede Version bleibt erhalten.</p></div></div>
+        <div class="toolbar"><button class="btn btn-primary" id="add-plan">＋ Neuer Plan</button></div>
+        <div id="plans-list" class="stack-list"></div>
+      </section>
+
+      <section class="view" id="view-exercises">
+        <div class="page-heading"><div><p class="eyebrow">LIBRARY</p><h1>Übungen</h1><p class="muted">Finde die passende Übung oder erstelle deine eigene.</p></div></div>
+        <div class="search-wrap"><span>⌕</span><input id="exercise-search" type="search" placeholder="Übung oder Muskelgruppe suchen…"></div>
+        <div class="filter-row" id="exercise-filters">
+          <button class="filter-chip selected" data-filter="Alle">Alle</button>
+          <button class="filter-chip" data-filter="Maschine">Maschine</button>
+          <button class="filter-chip" data-filter="Freihantel">Freihantel</button>
+          <button class="filter-chip" data-filter="Körpergewicht">Körpergewicht</button>
+          <button class="filter-chip" data-filter="Kabelzug">Kabelzug</button>
+          <button class="filter-chip" data-filter="Unilateral">Unilateral</button>
+        </div>
+        <div class="toolbar"><span class="muted small" id="exercise-count"></span><button class="btn btn-outline btn-small" id="add-exercise">＋ Eigene Übung</button></div>
+        <div id="exercise-list" class="exercise-grid"></div>
+      </section>
+
+      <section class="view" id="view-calendar">
+        <div class="page-heading"><div><p class="eyebrow">KONSISTENZ ZÄHLT</p><h1>Kalender</h1><p class="muted">Deine Trainings auf einen Blick.</p></div></div>
+        <div class="calendar-card">
+          <div class="calendar-header"><button class="icon-btn" id="cal-prev" aria-label="Vorheriger Monat">‹</button><h2 id="calendar-title"></h2><button class="icon-btn" id="cal-next" aria-label="Nächster Monat">›</button></div>
+          <div class="calendar-grid weekday-row"><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span></div>
+          <div class="calendar-grid" id="calendar-days"></div>
+          <div class="calendar-legend"><span><i></i> Training absolviert</span><span><i class="today-dot"></i> Heute</span></div>
+        </div>
+        <div class="section-head"><div><p class="eyebrow">AUSGEWÄHLTER TAG</p><h2 id="selected-date-title">Trainingstage</h2></div></div>
+        <div id="calendar-day-detail" class="stack-list empty-state">Wähle einen Tag im Kalender.</div>
+      </section>
+
+      <section class="view" id="view-progress">
+        <div class="page-heading"><div><p class="eyebrow">DEINE ENTWICKLUNG</p><h1>Progress</h1><p class="muted">Zahlen, die deine Arbeit sichtbar machen.</p></div></div>
+        <div class="segmented" id="progress-range"><button class="selected" data-range="week">Woche</button><button data-range="month">Monat</button><button data-range="year">Jahr</button><button data-range="all">Gesamt</button></div>
+        <div class="stats-grid">
+          <article class="stat-card"><span class="stat-icon">▦</span><strong id="stat-workouts">0</strong><small>Workouts</small></article>
+          <article class="stat-card"><span class="stat-icon">↗</span><strong id="stat-volume">0 kg</strong><small>Volumen</small></article>
+          <article class="stat-card"><span class="stat-icon">◷</span><strong id="stat-duration">0 h</strong><small>Trainingszeit</small></article>
+          <article class="stat-card"><span class="stat-icon">✦</span><strong id="stat-records">0</strong><small>Bestleistungen</small></article>
+        </div>
+        <div class="panel chart-panel"><div class="section-head compact"><div><p class="eyebrow">BELASTUNG</p><h2>Trainingsvolumen</h2></div></div><canvas id="volume-chart" height="210" aria-label="Trainingsvolumen im Zeitverlauf"></canvas><p class="chart-note">Summe aus Gewicht × Wiederholungen je Satz.</p></div>
+        <div class="panel chart-panel"><div class="section-head compact"><div><p class="eyebrow">KRAFT</p><h2>Übungsentwicklung</h2></div></div><select id="exercise-stat-select" class="field"></select><canvas id="strength-chart" height="210" aria-label="Gewichtsentwicklung einer Übung"></canvas></div>
+        <div class="panel"><div class="section-head compact"><div><p class="eyebrow">MUSKELGRUPPEN</p><h2>Trainingsverteilung</h2></div></div><div id="muscle-stats" class="muscle-bars"></div></div>
+        <div class="panel"><div class="section-head compact"><div><p class="eyebrow">KÖRPER</p><h2>Körperdaten</h2></div><button class="text-btn" id="add-body-entry">＋ Eintragen</button></div><div id="body-stats" class="body-stats"></div></div>
+      </section>
+
+      <section class="view" id="view-history">
+        <div class="page-heading"><div><p class="eyebrow">DEIN TRAININGSTAGEBUCH</p><h1>Historie</h1><p class="muted">Jedes Training bleibt nachvollziehbar.</p></div></div>
+        <div id="history-list" class="stack-list"></div>
+      </section>
+
+      <section class="view" id="view-workout">
+        <div id="workout-setup">
+          <div class="page-heading"><div><p class="eyebrow">LET'S WORK</p><h1>Workout starten</h1><p class="muted">Welches Training steht heute an?</p></div></div>
+          <div class="panel">
+            <label class="field-label" for="workout-plan-select">Trainingsprofil</label><select id="workout-plan-select" class="field"></select>
+            <label class="field-label" for="workout-day-select">Training auswählen</label><select id="workout-day-select" class="field"></select>
+            <div id="workout-preview" class="workout-preview"></div>
+            <button class="btn btn-primary btn-block" id="begin-workout">Workout starten <span>→</span></button>
+          </div>
+          <div class="tip-card"><span>💡</span><p>Du kannst während des Trainings jederzeit Übungen hinzufügen, Sätze anpassen und die Reihenfolge ändern.</p></div>
+        </div>
+        <div id="active-workout" hidden>
+          <div class="workout-top">
+            <button class="text-btn" id="cancel-workout">← Verlassen</button><span class="live-pill"><i></i> LIVE</span>
+          </div>
+          <div class="workout-title-row"><div><p class="eyebrow" id="active-plan-label">WORKOUT</p><h1 id="active-workout-title">Training</h1></div><div class="workout-clock"><small>DAUER</small><strong id="workout-duration">00:00</strong></div></div>
+          <div class="workout-metrics"><div><small>VOLUMEN</small><strong id="live-volume">0 kg</strong></div><div><small>ABGEHAKTE SÄTZE</small><strong id="live-sets">0 / 0</strong></div></div>
+          <div class="rest-panel">
+            <div><span class="eyebrow">PAUSENTIMER</span><strong id="rest-display">01:30</strong><small id="rest-status">Bereit, wenn du es bist.</small></div>
+            <div class="rest-controls"><button class="icon-btn" id="rest-minus" aria-label="10 Sekunden weniger">−10</button><button class="btn btn-primary btn-small" id="rest-toggle">Start</button><button class="icon-btn" id="rest-plus" aria-label="10 Sekunden mehr">+10</button><button class="icon-btn" id="rest-reset" aria-label="Timer zurücksetzen">↺</button></div>
+          </div>
+          <div class="section-head"><div><p class="eyebrow">DEIN TRAINING</p><h2>Übungen & Sätze</h2></div><button class="btn btn-outline btn-small" id="workout-add-exercise">＋ Übung</button></div>
+          <div id="active-exercises" class="active-exercise-list"></div>
+          <div class="finish-area"><button class="btn btn-primary btn-block" id="finish-workout">Training beenden</button><p>Dein Training wird lokal gespeichert.</p></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-settings">
+        <div class="page-heading"><div><p class="eyebrow">APP ANPASSEN</p><h1>Einstellungen</h1><p class="muted">Deine Daten gehören dir.</p></div></div>
+        <div class="panel settings-group">
+          <h2>Darstellung</h2>
+          <label class="field-label" for="language-select">Übungsnamen</label><select class="field" id="language-select"><option value="de">Deutsch</option><option value="en">English (nur Übungsnamen)</option></select>
+          <label class="field-label" for="unit-select">Gewichtseinheit</label><select class="field" id="unit-select"><option value="kg">Kilogramm (kg)</option><option value="lb">Pfund (lb)</option></select>
+          <label class="field-label" for="default-rest">Standard-Pausenzeit</label><select class="field" id="default-rest"><option value="45">45 Sekunden</option><option value="60">60 Sekunden</option><option value="90">90 Sekunden</option><option value="120">120 Sekunden</option><option value="150">150 Sekunden</option><option value="180">180 Sekunden</option></select>
+        </div>
+        <div class="panel settings-group">
+          <h2>Datensicherung</h2><p class="muted small">Deine Trainingsdaten liegen zunächst lokal auf diesem Gerät. Exportiere regelmäßig eine Sicherung.</p>
+          <button class="btn btn-outline btn-block" id="export-data">↓ Lokales Backup exportieren</button>
+          <label class="btn btn-outline btn-block file-label">↑ Backup importieren<input type="file" id="import-data" accept="application/json"></label>
+          <button class="btn btn-danger-outline btn-block" id="reset-data">Lokale Daten zurücksetzen</button>
+        </div>
+        <div class="panel settings-group">
+          <h2>Cloud-Synchronisierung</h2><span class="pill pill-warning">Noch nicht verbunden</span>
+          <p class="muted small">Die erste Version arbeitet vollständig lokal und offline. Supabase-Login und Synchronisierung werden in einem späteren Schritt ergänzt. Es gibt deshalb noch keinen Cloud-Überschreiben-Button, der nur so tun würde, als wäre er echt.</p>
+          <div class="cloud-note">🔒 Niemals einen Supabase-Service-Role-Key in diese Webseite eintragen. Später verwenden wir ausschließlich den öffentlichen Anon-Key mit aktivierten Row-Level-Security-Regeln.</div>
+        </div>
+        <div class="panel settings-group">
+          <h2>Über IronLog</h2><p class="muted small">Version 0.1.0 · Offline-first Workout Tracker</p><p class="muted small">Tipp: Auf dem iPhone in Safari öffnen → Teilen → „Zum Home-Bildschirm“.</p>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Hauptnavigation">
+      <button class="nav-item active" data-nav="home"><span>⌂</span><small>Home</small></button>
+      <button class="nav-item" data-nav="plans"><span>▤</span><small>Pläne</small></button>
+      <button class="nav-item nav-workout" data-nav="workout"><span>＋</span><small>Workout</small></button>
+      <button class="nav-item" data-nav="calendar"><span>▦</span><small>Kalender</small></button>
+      <button class="nav-item" data-nav="progress"><span>↗</span><small>Progress</small></button>
+    </nav>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast-root" aria-live="polite"></div>
+  <script src="./app.js"></script>
+</body>
+</html>

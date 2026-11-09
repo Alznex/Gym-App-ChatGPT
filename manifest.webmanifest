@@ -1,0 +1,19 @@
+{
+  "name": "IronLog – Gym Tracker",
+  "short_name": "IronLog",
+  "description": "Dein persönlicher Workout-Tracker",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f3f8",
+  "theme_color": "#25212f",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
