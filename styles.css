@@ -5,3 +5,23 @@
 @media(max-width:380px){.view{padding-left:15px;padding-right:15px}.hero-card{padding:20px}.hero-orbit{width:100px;height:100px}.hero-orbit b{font-size:10px}.stats-grid{gap:7px}.stat-card{padding:11px}.stat-card strong{font-size:17px}.rest-panel{align-items:flex-start;flex-direction:column}.rest-controls{justify-content:flex-start}.nav-item{min-width:43px}}
 
 .active-exercise.drop-target{border:2px solid var(--purple);transform:scale(.99)}
+
+/* IronLog 0.2.0 polish: accessible mobile inputs, scrollable modal lists and dark theme */
+input,select,textarea,.field,.set-input,.search-wrap input{font-size:16px}
+.modal{display:flex;flex-direction:column;overscroll-behavior:contain}
+.modal-list{overflow-y:auto;max-height:min(48dvh,420px);overscroll-behavior:contain;padding-right:2px}
+.calendar-header .calendar-mode{width:auto;max-width:110px;margin:0;padding:8px;font-size:13px}
+:root[data-theme="dark"]{--bg:#17141e;--surface:#24202d;--surface2:#302a3b;--ink:#eeeaf5;--muted:#aaa2b6;--line:#40394c;--purple:#a889ef;--purple2:#bda7f5;--purple-dark:#4a3473;--shadow:0 10px 30px rgba(0,0,0,.18)}
+:root[data-theme="dark"] body,:root[data-theme="dark"] html{background:var(--bg);color:var(--ink)}
+:root[data-theme="dark"] .topbar,:root[data-theme="dark"] .bottom-nav{background:rgba(29,25,37,.94);border-color:var(--line)}
+:root[data-theme="dark"] .stat-card,:root[data-theme="dark"] .mini-plan,:root[data-theme="dark"] .list-card,:root[data-theme="dark"] .panel,:root[data-theme="dark"] .calendar-card,:root[data-theme="dark"] .exercise-card,:root[data-theme="dark"] .active-exercise,:root[data-theme="dark"] .modal,:root[data-theme="dark"] .search-wrap,:root[data-theme="dark"] .field,:root[data-theme="dark"] .filter-chip,:root[data-theme="dark"] .btn-outline,:root[data-theme="dark"] .set-input,:root[data-theme="dark"] .modal-exercise{background:var(--surface);color:var(--ink);border-color:var(--line)}
+:root[data-theme="dark"] .search-wrap input,:root[data-theme="dark"] .field,:root[data-theme="dark"] .set-input{color:var(--ink)}
+:root[data-theme="dark"] .tag,:root[data-theme="dark"] .body-chip,:root[data-theme="dark"] .workout-preview,:root[data-theme="dark"] .icon-btn{background:var(--surface2);color:var(--ink)}
+:root[data-theme="dark"] .exercise-card small,:root[data-theme="dark"] .modal p,:root[data-theme="dark"] .modal-exercise small{color:var(--muted)}
+:root[data-theme="dark"] .segmented{background:#292432}
+:root[data-theme="dark"] .segmented button.selected{background:#403650;color:#eeeaf5}
+:root[data-theme="dark"] .day-cell{color:var(--ink)}
+:root[data-theme="dark"] .day-cell.muted-day{color:#625b6d}
+:root[data-theme="dark"] .cloud-note{background:#302a3b;color:#c8bddc}
+:root[data-theme="dark"] .tip-card{background:#302a3b;color:#d5c8ed}
+:root[data-theme="dark"] .hero-card{box-shadow:0 16px 35px rgba(0,0,0,.25)}
