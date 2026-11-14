@@ -1,4 +1,4 @@
-/* IronLog 0.2.1 – local-first workout tracker */
+/* IronLog 0.2.2 – local-first workout tracker */
 (() => {
 'use strict';
 const $ = s => document.querySelector(s);
@@ -235,7 +235,7 @@ const seedPlans = [
 {id:'uku-lower',name:'Unterkörper',exercises:['ex-21','ex-22','ex-24','ex-25','ex-27','ex-29'].map(id=>({exerciseId:id,sets:3,rest:120}))}
 ]}
 ];
-const freshState = () => ({schema:2,exercises:JSON.parse(JSON.stringify([...baseExercises,...extraExercises])),plans:JSON.parse(JSON.stringify(seedPlans)).map(p=>({...p,lineageId:p.id})),sessions:[],bodyEntries:[],activeWorkout:null,settings:{language:'de',unit:'kg',defaultRest:90,theme:'light',calendarMode:'month'},createdAt:new Date().toISOString()});
+const freshState = () => ({schema:2,exercises:JSON.parse(JSON.stringify([...baseExercises,...extraExercises])),plans:JSON.parse(JSON.stringify(seedPlans)).map((p,i)=>({...p,active:i===0,lineageId:p.id})),sessions:[],bodyEntries:[],activeWorkout:null,settings:{language:'de',unit:'kg',defaultRest:90,theme:'light',calendarMode:'month'},createdAt:new Date().toISOString()});
 let state, db, currentView='home', calDate=new Date(), selectedDay=todayISO(), progressRange='week', exerciseFilter='Alle', restRemaining=90, restInterval=null, workoutInterval=null, dragId=null, dropTargetId=null;
 
 function openDB(){return new Promise((resolve,reject)=>{
@@ -250,7 +250,7 @@ async function loadState(){
  try{const raw=localStorage.getItem('ironlog-state');if(raw)return normalizeState(JSON.parse(raw))}catch(e){console.warn(e)}
  return freshState();
 }
-function normalizeState(s){const f=freshState();const existing=Array.isArray(s.exercises)?s.exercises:[];const known=new Set(existing.map(e=>e.id));const out={...f,...s,settings:{...f.settings,...(s.settings||{})},exercises:[...existing,...f.exercises.filter(e=>!known.has(e.id))],plans:Array.isArray(s.plans)?s.plans:f.plans,sessions:Array.isArray(s.sessions)?s.sessions:[],bodyEntries:Array.isArray(s.bodyEntries)?s.bodyEntries:[]};out.schema=2;out.plans.forEach(p=>{p.lineageId=p.lineageId||p.id;(p.days||[]).forEach(d=>(d.exercises||[]).forEach(x=>{delete x.reps;x.sets=Math.max(1,Number(x.sets)||3);x.rest=Math.max(0,Number(x.rest)||out.settings.defaultRest)}))});return out}
+function normalizeState(s){const f=freshState();const existing=Array.isArray(s.exercises)?s.exercises:[];const known=new Set(existing.map(e=>e.id));const out={...f,...s,settings:{...f.settings,...(s.settings||{})},exercises:[...existing,...f.exercises.filter(e=>!known.has(e.id))],plans:Array.isArray(s.plans)?s.plans:f.plans,sessions:Array.isArray(s.sessions)?s.sessions:[],bodyEntries:Array.isArray(s.bodyEntries)?s.bodyEntries:[]};out.schema=2;out.plans.forEach(p=>{p.lineageId=p.lineageId||p.id;(p.days||[]).forEach(d=>(d.exercises||[]).forEach(x=>{delete x.reps;x.sets=Math.max(1,Number(x.sets)||3);x.rest=Math.max(0,Number(x.rest)||out.settings.defaultRest)}))});const active=out.plans.filter(p=>p.active).sort((a,b)=>Number(b.version||1)-Number(a.version||1))[0];out.plans.forEach(p=>p.active=!!active&&p.id===active.id);return out}
 let saveQueue=Promise.resolve();
 function saveState(){
  $('#save-status').innerHTML='<i style="background:#d69b36"></i> Speichert…';
@@ -286,22 +286,60 @@ function renderHome(){
  $('#home-plans').innerHTML=state.plans.filter(p=>p.active).slice(0,4).map(p=>`<div class="mini-plan"><strong>${esc(p.name)}</strong><small>${p.days.length} Trainingstage · Version ${p.version}</small></div>`).join('')||'<div class="empty-state">Noch keine aktiven Pläne.</div>';
 }
 function sessionCard(s){return `<article class="list-card"><div class="plan-card"><div><strong>${esc(s.dayName||s.name)}</strong><small>${esc(s.planName||'Freies Training')} · ${fmtDate(sessionDate(s))}</small></div><strong>${kg(s.volume)}</strong></div><div class="history-meta"><span>◷ ${Math.round(s.duration/60)} min</span><span>▤ ${s.exercises.length} Übungen</span><span>✓ ${s.completedSets} Sätze</span></div></article>`}
+function latestPlanVersions(){
+ const byLineage=new Map();
+ state.plans.forEach(p=>{const key=p.lineageId||p.id;const old=byLineage.get(key);if(!old||Number(p.version||1)>Number(old.version||1))byLineage.set(key,p)});
+ return [...byLineage.values()].sort((a,b)=>Number(!!b.active)-Number(!!a.active)||a.name.localeCompare(b.name,'de'));
+}
+function setActivePlan(planId){
+ state.plans.forEach(p=>p.active=!!planId&&p.id===planId);
+ saveState();renderPlans();if(currentView==='home')renderHome();
+}
+function deletePlanFamily(planId){
+ const plan=state.plans.find(p=>p.id===planId);if(!plan)return;
+ const lineage=plan.lineageId||plan.id;
+ const count=state.plans.filter(p=>(p.lineageId||p.id)===lineage).length;
+ if(!confirm(`„${plan.name}“ wirklich löschen? Dabei werden ${count} gespeicherte Version${count===1?'':'en'} dieses Plans entfernt. Bereits absolvierte Workouts in der Historie bleiben erhalten.`))return;
+ state.plans=state.plans.filter(p=>(p.lineageId||p.id)!==lineage);
+ saveState();renderPlans();if(currentView==='home')renderHome();toast('Trainingsplan gelöscht');
+}
 function renderPlans(){
- $('#plans-list').innerHTML=state.plans.length?state.plans.map(p=>`<article class="list-card"><div class="plan-card"><div><strong>${esc(p.name)}</strong><small>Version ${p.version} · ${p.days.length} Trainingstage · ${p.active?'Aktiv':'Archiviert'}</small><div class="tag-row">${p.days.map(d=>`<span class="tag">${esc(d.name)}</span>`).join('')}</div></div><div class="plan-actions"><button class="btn btn-outline btn-small" data-edit-plan="${p.id}">Bearbeiten</button><button class="btn btn-outline btn-small" data-activate-plan="${p.id}">${p.active?'Aktiv':'Aktivieren'}</button></div></div></article>`).join(''):'<div class="empty-state">Noch keine Pläne vorhanden.</div>';
- $$('[data-edit-plan]').forEach(b=>b.onclick=()=>editPlan(b.dataset.editPlan));$$('[data-activate-plan]').forEach(b=>b.onclick=()=>{const p=state.plans.find(x=>x.id===b.dataset.activatePlan);state.plans.filter(x=>(x.lineageId||x.id)===(p.lineageId||p.id)).forEach(x=>x.active=false);p.active=true;saveState();renderPlans();toast('Plan aktiviert')});
+ $('#plans-list').innerHTML=state.plans.length?latestPlanVersions().map(p=>{
+  const lineage=p.lineageId||p.id,versions=state.plans.filter(x=>(x.lineageId||x.id)===lineage).length;
+  return `<article class="list-card"><div class="plan-card"><div><strong>${esc(p.name)}</strong><small>Version ${p.version} · ${versions} gespeicherte Version${versions===1?'':'en'} · ${p.days.length} Trainingstage · ${p.active?'Aktiv':'Nicht aktiv'}</small><div class="tag-row">${p.days.map(d=>`<span class="tag">${esc(d.name)}</span>`).join('')}</div></div><div class="plan-actions"><button class="btn btn-outline btn-small" data-edit-plan="${p.id}">Bearbeiten</button><button class="btn ${p.active?'btn-primary':'btn-outline'} btn-small" data-toggle-plan="${p.id}">${p.active?'Deaktivieren':'Aktivieren'}</button><button class="btn btn-danger-outline btn-small" data-delete-plan="${p.id}">Löschen</button></div></div></article>`
+ }).join(''):'<div class="empty-state">Noch keine Pläne vorhanden.</div>';
+ $$('[data-edit-plan]').forEach(b=>b.onclick=()=>editPlan(b.dataset.editPlan));
+ $$('[data-toggle-plan]').forEach(b=>b.onclick=()=>{const p=state.plans.find(x=>x.id===b.dataset.togglePlan);if(!p)return;const activate=!p.active;setActivePlan(activate?p.id:null);toast(activate?'Plan aktiviert':'Plan deaktiviert')});
+ $$('[data-delete-plan]').forEach(b=>b.onclick=()=>deletePlanFamily(b.dataset.deletePlan));
 }
 function editPlan(id){
  const original=state.plans.find(x=>x.id===id);if(!original)return;
  const draft=JSON.parse(JSON.stringify(original));
  renderPlanEditor(draft,original);
 }
+function restorePlanVersion(versionId,currentId){
+ const source=state.plans.find(p=>p.id===versionId),current=state.plans.find(p=>p.id===currentId);if(!source||!current)return;
+ if(!confirm(`Version ${source.version} als neue Version wiederherstellen? Die aktuelle Version bleibt erhalten.`))return;
+ const lineage=current.lineageId||current.id;
+ const restored=JSON.parse(JSON.stringify(source));
+ restored.id=uid();restored.lineageId=lineage;
+ restored.version=Math.max(0,...state.plans.filter(p=>(p.lineageId||p.id)===lineage).map(p=>Number(p.version)||1))+1;
+ restored.active=!!current.active;
+ restored.days.forEach(d=>{d.id=uid()});
+ if(restored.active)state.plans.forEach(p=>p.active=false);
+ state.plans.push(restored);saveState();closeModal();renderPlans();toast(`Version ${source.version} als V${restored.version} wiederhergestellt`);
+}
 function renderPlanEditor(draft,original){
- openModal(`<h2>${original?'Planversion bearbeiten':'Neuen Trainingsplan erstellen'}</h2><p>${original?'Deine Änderungen werden als neue Version gespeichert. Die bisherige Version bleibt unverändert.':'Lege Trainingstage an und füge anschließend Übungen hinzu.'}</p><label class="field-label">Planname</label><input class="field" id="plan-version-name" value="${esc(draft.name)}"><div class="modal-list" id="plan-day-list">${draft.days.map(d=>`<div class="modal-exercise"><div><strong>${esc(d.name)}</strong><small>${d.exercises.length} Übungen</small></div><button class="btn btn-outline btn-small" data-edit-day-draft="${d.id}">Bearbeiten</button></div>`).join('')||'<p>Noch keine Trainingstage angelegt.</p>'}</div><label class="field-label">Trainingstag hinzufügen</label><div style="display:flex;gap:7px"><input class="field" id="new-day-name" placeholder="z. B. Push" style="margin:0"><button class="btn btn-outline" id="add-plan-day">＋</button></div><div class="modal-actions"><button class="btn btn-outline" id="modal-cancel">Abbrechen</button><button class="btn btn-primary" id="save-plan-version">${original?'Neue Version speichern':'Plan speichern'}</button></div>`);
+ const lineage=original?(original.lineageId||original.id):null;
+ const history=original?state.plans.filter(p=>(p.lineageId||p.id)===lineage).sort((a,b)=>Number(b.version)-Number(a.version)):[];
+ const restoreHtml=history.length>1?`<div class="plan-version-history"><h3>Frühere Versionen</h3><p>Eine alte Version wird als neue Version wiederhergestellt. Deine aktuelle Version bleibt erhalten.</p>${history.filter(v=>v.id!==original.id).map(v=>`<div class="modal-exercise"><div><strong>Version ${v.version}${v.active?' · Aktiv':''}</strong><small>${v.days.length} Trainingstage · ${esc(v.name)}</small></div><button class="btn btn-outline btn-small" data-restore-version="${v.id}">Wiederherstellen</button></div>`).join('')}</div>`:'';
+ openModal(`<h2>${original?'Plan bearbeiten':'Neuen Trainingsplan erstellen'}</h2><p>${original?'Änderungen werden als neue Version gespeichert. Frühere Versionen kannst du unten gezielt wiederherstellen.':'Lege Trainingstage an und füge anschließend Übungen hinzu.'}</p><label class="field-label">Planname</label><input class="field" id="plan-version-name" value="${esc(draft.name)}"><div class="modal-list" id="plan-day-list">${draft.days.map(d=>`<div class="modal-exercise"><div><strong>${esc(d.name)}</strong><small>${d.exercises.length} Übungen</small></div><button class="btn btn-outline btn-small" data-edit-day-draft="${d.id}">Bearbeiten</button></div>`).join('')||'<p>Noch keine Trainingstage angelegt.</p>'}</div><label class="field-label">Trainingstag hinzufügen</label><div style="display:flex;gap:7px"><input class="field" id="new-day-name" placeholder="z. B. Push" style="margin:0"><button class="btn btn-outline" id="add-plan-day">＋</button></div>${restoreHtml}<div class="modal-actions"><button class="btn btn-outline" id="modal-cancel">Abbrechen</button><button class="btn btn-primary" id="save-plan-version">${original?'Änderungen als neue Version speichern':'Plan speichern'}</button></div>`);
  const syncName=()=>{draft.name=$('#plan-version-name').value.trim()||draft.name};
  $$('[data-edit-day-draft]').forEach(b=>b.onclick=()=>{syncName();editPlanDayDraft(draft,b.dataset.editDayDraft,()=>renderPlanEditor(draft,original))});
+ $$('[data-restore-version]').forEach(b=>b.onclick=()=>restorePlanVersion(b.dataset.restoreVersion,original.id));
  $('#add-plan-day').onclick=()=>{syncName();const name=$('#new-day-name').value.trim();if(!name){toast('Bitte einen Namen für den Trainingstag eingeben');return}draft.days.push({id:uid(),name,exercises:[]});renderPlanEditor(draft,original)};
  $('#modal-cancel').onclick=closeModal;
- $('#save-plan-version').onclick=()=>{syncName();if(!draft.days.length){toast('Lege mindestens einen Trainingstag an');return}const final=JSON.parse(JSON.stringify(draft));final.id=uid();final.lineageId=original?(original.lineageId||original.id):draft.id;final.version=original?original.version+1:1;final.active=true;final.days.forEach(d=>{d.id=uid()});if(original)state.plans.filter(p=>(p.lineageId||p.id)===final.lineageId).forEach(p=>p.active=false);state.plans.push(final);saveState();closeModal();renderPlans();toast(original?'Neue Planversion gespeichert':'Trainingsplan erstellt')};
+ $('#save-plan-version').onclick=()=>{syncName();if(!draft.days.length){toast('Lege mindestens einen Trainingstag an');return}const final=JSON.parse(JSON.stringify(draft));final.id=uid();final.lineageId=original?(original.lineageId||original.id):draft.id;final.version=original?Math.max(0,...state.plans.filter(p=>(p.lineageId||p.id)===final.lineageId).map(p=>Number(p.version)||1))+1:1;final.active=original?!!original.active:!state.plans.some(p=>p.active);final.days.forEach(d=>{d.id=uid()});if(final.active)state.plans.forEach(p=>p.active=false);state.plans.push(final);saveState();closeModal();renderPlans();toast(original?'Neue Planversion gespeichert':'Trainingsplan erstellt')};
 }
 function editPlanDayDraft(draft,dayId,returnToEditor){
  const d=draft.days.find(x=>x.id===dayId);if(!d)return;
@@ -317,7 +355,7 @@ function editPlanDayDraft(draft,dayId,returnToEditor){
 }
 function addPlan(){
  openModal(`<h2>Neuen Trainingsplan erstellen</h2><p>Gib deinem Split einen Namen.</p><label class="field-label">Planname</label><input id="new-plan-name" class="field" placeholder="z. B. Mein 4er Split"><div class="modal-actions"><button class="btn btn-outline" id="modal-cancel">Abbrechen</button><button class="btn btn-primary" id="create-plan">Weiter</button></div>`);
- $('#modal-cancel').onclick=closeModal;$('#create-plan').onclick=()=>{const name=$('#new-plan-name').value.trim();if(!name){toast('Bitte einen Namen eingeben');return}const draft={id:uid(),name,version:1,active:true,days:[]};renderPlanEditor(draft,null)};
+ $('#modal-cancel').onclick=closeModal;$('#create-plan').onclick=()=>{const name=$('#new-plan-name').value.trim();if(!name){toast('Bitte einen Namen eingeben');return}const draft={id:uid(),name,version:1,active:!state.plans.some(p=>p.active),days:[]};renderPlanEditor(draft,null)};
 }
 function renderExercises(){
  const q=($('#exercise-search').value||'').toLowerCase();
@@ -338,15 +376,25 @@ function openExercisePicker(onPick){
  $('#picker-search').oninput=render;$('#picker-custom').onclick=()=>{closeModal();addExercise(onPick)};render();
 }
 function setupWorkoutSelect(){
- const active=state.plans.filter(p=>p.active);$('#workout-plan-select').innerHTML=active.map(p=>`<option value="${p.id}">${esc(p.name)} · V${p.version}</option>`).join('')||'<option value="">Kein aktiver Plan</option>';
+ const select=$('#workout-plan-select');
+ const plans=latestPlanVersions();
+ const previous=select.value;
+ select.innerHTML=plans.map(p=>`<option value="${p.id}">${esc(p.name)} · V${p.version}${p.active?' · Aktiv':''}</option>`).join('')+'<option value="">Freies Training</option>';
+ const active=plans.find(p=>p.active);
+ select.value=plans.some(p=>p.id===previous)?previous:(active?.id||plans[0]?.id||'');
  updateWorkoutDays();
 }
 function updateWorkoutDays(){
- const p=state.plans.find(x=>x.id===$('#workout-plan-select').value);$('#workout-day-select').innerHTML=p?.days.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('')||'<option value="">Freies Training</option>';
- const d=p?.days.find(x=>x.id===$('#workout-day-select').value);$('#workout-preview').innerHTML=d?d.exercises.map(x=>{const e=exerciseById(x.exerciseId);return `${esc(e?exName(e):'Übung')} · ${x.sets} Sätze · ${x.rest||state.settings.defaultRest}s Pause`}).join('<br>'):'Freies Training – Übungen während des Workouts hinzufügen.';
+ const p=latestPlanVersions().find(x=>x.id===$('#workout-plan-select').value);
+ const daySelect=$('#workout-day-select');
+ const previous=daySelect.value;
+ daySelect.innerHTML=p?.days.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('')||'<option value="">Freies Training</option>';
+ if(p&&p.days.some(d=>d.id===previous))daySelect.value=previous;
+ const d=p?.days.find(x=>x.id===daySelect.value);
+ $('#workout-preview').innerHTML=d?d.exercises.map(x=>{const e=exerciseById(x.exerciseId);return `${esc(e?exName(e):'Übung')} · ${x.sets} Sätze · ${x.rest||state.settings.defaultRest}s Pause`}).join('<br>')||'Dieser Trainingstag hat noch keine Übungen. Du kannst sie während des Workouts hinzufügen.':'Freies Training – Übungen während des Workouts hinzufügen.';
 }
 function startWorkout(){
- const p=state.plans.find(x=>x.id===$('#workout-plan-select').value),d=p?.days.find(x=>x.id===$('#workout-day-select').value);
+ const p=latestPlanVersions().find(x=>x.id===$('#workout-plan-select').value),d=p?.days.find(x=>x.id===$('#workout-day-select').value);
  if(state.activeWorkout){showView('workout');return}
  const exercises=(d?.exercises||[]).map(x=>{const previous=[...state.sessions].sort((a,b)=>b.startedAt.localeCompare(a.startedAt)).flatMap(session=>session.exercises).find(ex=>ex.exerciseId===x.exerciseId);return {id:uid(),exerciseId:x.exerciseId,rest:x.rest||state.settings.defaultRest,sets:Array.from({length:x.sets||3},(_,i)=>{const oldSet=previous?.sets[i]||previous?.sets.at(-1);return {weight:Number(oldSet?.weight)||0,reps:Number(oldSet?.reps)||0,done:false}})}});
  state.activeWorkout={id:uid(),planId:p?.id||null,planName:p?.name||'Freies Training',planVersion:p?.version||null,dayId:d?.id||null,dayName:d?.name||'Freies Training',startedAt:new Date().toISOString(),exercises};
